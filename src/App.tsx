@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,6 +8,16 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+// Detect if we're running in a mobile environment
+const isMobileApp = 
+  /Android/i.test(navigator.userAgent) || 
+  /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+// Apply mobile-specific styles if needed
+if (isMobileApp) {
+  document.documentElement.classList.add('mobile-app');
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
