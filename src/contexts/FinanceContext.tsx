@@ -3,6 +3,8 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { Transaction, FinancialSummary } from "@/types/finance";
 import { nanoid } from "@/lib/utils";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FinanceContextType {
   transactions: Transaction[];
@@ -15,10 +17,8 @@ interface FinanceContextType {
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
-  const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const saved = localStorage.getItem("transactions");
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const { user } = useAuth();
 
   const [summary, setSummary] = useState<FinancialSummary>({
     totalIncome: 0,
@@ -27,7 +27,23 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    localStorage.setItem("transactions", JSON.stringify(transactions));
+    // Load transactions from localStorage when the component mounts
+    if (user) {
+      const userId = user.id;
+      const storageKey = `transactions_${userId}`;
+      const saved = localStorage.getItem(storageKey);
+      setTransactions(saved ? JSON.parse(saved) : []);
+    } else {
+      setTransactions([]);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user && transactions.length > 0) {
+      const userId = user.id;
+      const storageKey = `transactions_${userId}`;
+      localStorage.setItem(storageKey, JSON.stringify(transactions));
+    }
     
     // Calculate summary
     const totalIncome = transactions
@@ -41,7 +57,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     const netBalance = totalIncome - totalExpenses;
     
     setSummary({ totalIncome, totalExpenses, netBalance });
-  }, [transactions]);
+  }, [transactions, user]);
 
   const addTransaction = (transaction: Omit<Transaction, "id">) => {
     const newTransaction = { ...transaction, id: nanoid() };
@@ -55,6 +71,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const clearTransactions = () => {
+    if (user) {
+      const userId = user.id;
+      const storageKey = `transactions_${userId}`;
+      localStorage.removeItem(storageKey);
+    }
     setTransactions([]);
     toast.info("All transactions cleared");
   };
